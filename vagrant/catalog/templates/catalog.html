@@ -1,0 +1,27 @@
+<html>
+
+<body>
+
+<h1> Show Catalog Item for {{sport.name}}</h1>
+
+<a href="{{url_for('editSport', sport_id = sport.id )}}">Edit Sport</a>
+<a href="{{url_for('newItem', sport_id = sport.id )}}">Add Item</a>
+
+{% for i in items %}
+
+<div>
+	<p>{{i.name}}</p>
+	<p>{{i.description}}</p>
+
+
+<a href="{{url_for('editItem', sport_id = sport.id, catalog_id=i.id)}}">Edit Catalog Item</a>
+</br>
+<a href="{{url_for('deleteItem', sport_id = sport.id, catalog_id=i.id )}}">Delete Catalog Item</a>
+
+</br>
+</div>
+
+{% endfor %}
+
+</body>
+</html>

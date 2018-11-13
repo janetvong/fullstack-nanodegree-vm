@@ -1,0 +1,16 @@
+<html>
+
+<body>
+
+<h1>Delete Page</h1>
+<h2> Are you sure you want to delete the sport?</h2>
+
+<form action='{{url_for('deleteSport', sport_id=sport.id)}}' method = 'POST'>
+
+<input type='submit' value='Delete'>
+
+</form>
+<a href='{{url_for('showSports')}}'>Cancel</a>
+
+</body>
+</html>
