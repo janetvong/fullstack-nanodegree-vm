@@ -25,6 +25,14 @@ class Sport(Base):
 #    user_id = Column(Integer, ForeignKey('user.id'))
 #    user = relationship(User)
 
+    @property
+    def serialize(self):
+        """Return object data in easily serializeable format"""
+        return {
+            'name': self.name,
+            'id': self.id,
+         }
+
 # sport item table
 # inside CatalogItem class
 class CatalogItem(Base):
@@ -46,9 +54,9 @@ class CatalogItem(Base):
             'id': self.id,
             'description': self.description,
             'sport_id': self.sport_id,
-            'sport': self.sport,
+            'sport': self.sport.serialize,
         }
 
-engine = create_engine('sqlite:///sportcatalogwithusers.db') ## create an instance of our create_engine class and point to the database we will use.
+engine = create_engine('sqlite:///sportcatalog.db') ## create an instance of our create_engine class and point to the database we will use.
 
 Base.metadata.create_all(engine) ## goes into the database and adds the classes we will soon create as new tables in our database.
