@@ -39,7 +39,7 @@ cd /vagrant
 6. Change to the catalog directory
 
 ```
-catalog
+cd catalog
 ```
 
 7. Set up the database by running the following command once:
