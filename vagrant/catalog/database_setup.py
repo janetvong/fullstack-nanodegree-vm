@@ -7,23 +7,14 @@ from sqlalchemy import create_engine
 
 Base = declarative_base()
 
-#class User(Base):
-#    __tablename__ = 'user'
-#
-#    id = Column(Integer, primary_key=True)
-#    name = Column(String(250), nullable=False)
-#    email = Column(String(250), nullable=False)
-#    picture = Column(String(250))
-
-
 # sport table
+
+
 class Sport(Base):
     __tablename__ = 'sport'
 
-    name = Column(String(80), nullable = False)
-    id = Column(Integer, primary_key = True)
-#    user_id = Column(Integer, ForeignKey('user.id'))
-#    user = relationship(User)
+    name = Column(String(80), nullable=False)
+    id = Column(Integer, primary_key=True)
 
     @property
     def serialize(self):
@@ -35,11 +26,13 @@ class Sport(Base):
 
 # sport item table
 # inside CatalogItem class
+
+
 class CatalogItem(Base):
     __tablename__ = 'catalog_item'
 
-    name = Column(String(80), nullable = False)
-    id = Column(Integer, primary_key = True)
+    name = Column(String(80), nullable=False)
+    id = Column(Integer, primary_key=True)
     description = Column(String(2000))
     sport_id = Column(Integer, ForeignKey('sport.id'))
     sport = relationship(Sport)
@@ -57,6 +50,10 @@ class CatalogItem(Base):
             'sport': self.sport.serialize,
         }
 
-engine = create_engine('sqlite:///sportcatalog.db') ## create an instance of our create_engine class and point to the database we will use.
+# create an instance of our create_engine class and point to the database
+# we will use.
+engine = create_engine('sqlite:///sportcatalog.db')
 
-Base.metadata.create_all(engine) ## goes into the database and adds the classes we will soon create as new tables in our database.
+# goes into the database and adds the classes we will soon create as new tables
+# in our database.
+Base.metadata.create_all(engine)
