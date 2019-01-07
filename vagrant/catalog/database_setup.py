@@ -7,6 +7,17 @@ from sqlalchemy import create_engine
 
 Base = declarative_base()
 
+# user table
+
+
+class User(Base):
+    __tablename__ = 'user'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(250), nullable=False)
+    email = Column(String(250), nullable=False)
+    picture = Column(String(250))
+
 # sport table
 
 
@@ -15,6 +26,8 @@ class Sport(Base):
 
     name = Column(String(80), nullable=False)
     id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user = relationship(User)
 
     @property
     def serialize(self):
@@ -36,8 +49,8 @@ class CatalogItem(Base):
     description = Column(String(2000))
     sport_id = Column(Integer, ForeignKey('sport.id'))
     sport = relationship(Sport)
-#    user_id = Column(Integer, ForeignKey('user.id'))
-#    user = relationship(User)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user = relationship(User)
 
     @property
     def serialize(self):
@@ -52,7 +65,7 @@ class CatalogItem(Base):
 
 # create an instance of our create_engine class and point to the database
 # we will use.
-engine = create_engine('sqlite:///sportcatalog.db')
+engine = create_engine('sqlite:///sportcatalogwithusers.db')
 
 # goes into the database and adds the classes we will soon create as new tables
 # in our database.

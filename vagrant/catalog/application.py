@@ -2,11 +2,12 @@ from flask import Flask, render_template, request, redirect, url_for
 from flask import jsonify, flash
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, Sport, CatalogItem
+from database_setup import Base, Sport, CatalogItem, User
 
 # Import for creating anti forgery state token
 from flask import session as login_session
-import random, string
+import random
+import string
 
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
@@ -21,7 +22,7 @@ APPLICATION_NAME = "Sport Catalog Application"
 app = Flask(__name__)
 
 # Connect to Database and create database session
-engine = create_engine('sqlite:///sportcatalog.db')
+engine = create_engine('sqlite:///sportcatalogwithusers.db')
 Base.metadata.bind = engine
 
 DBSession = sessionmaker(bind=engine)
@@ -54,7 +55,7 @@ def gconnect():
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
     except FlowExchangeError:
-        response = make_response(json.dumps('Failed to upgrade the
+        response = make_response(json.dumps('Failed to upgrade the\
                                  authorization code.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
@@ -89,7 +90,7 @@ def gconnect():
     stored_access_token = login_session.get('access_token')
     stored_gplus_id = login_session.get('gplus_id')
     if stored_access_token is not None and gplus_id == stored_gplus_id:
-        response = make_response(json.dumps('Current user is already
+        response = make_response(json.dumps('Current user is already\
                                  connected.'), 200)
         response.headers['Content-Type'] = 'application/json'
 
@@ -108,6 +109,12 @@ def gconnect():
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
 
+    # See if user exists, if it doesn't make a new one
+    user_id = getUserID(login_session['email'])
+    if not user_id:
+        user_id = createUser(login_session)
+    login_session['user_id'] = user_id
+
     output = ''
     output += '<h1>Welcome, '
     output += login_session['username']
@@ -120,6 +127,36 @@ def gconnect():
     flash("you are now logged in as %s" % login_session['username'])
     print "done!"
     return output
+
+# User Helper functions
+
+
+def createUser(login_session):
+    newUser = User(name=login_session['username'],
+                   email=login_session['email'],
+                   picture=login_session['picture'])
+    session.add(newUser)
+    session.commit()
+    user = session.query(User).filter_by(email=login_session['email']).one()
+    return user.id
+
+
+def getUserInfo(user_id):
+    user = session.query(User).filter_by(id=user_id).one()
+    return user
+#    return user_id
+
+
+def getUserID(email):
+    try:
+        user = session.query(User).filter_by(email=email).one()
+        return user.id
+    except:
+        return None
+
+
+
+
 
 # DISCONNECT - Revoke a current user's token and reset their login_session.
 
@@ -138,8 +175,8 @@ def gdisconnect():
     print ('In gdisconnect access token is %s', access_token)
     print 'User name is: '
     print login_session['username']
-    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s'
-    % login_session['access_token']
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' \
+          % login_session['access_token']
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
     print 'result is '
@@ -157,10 +194,11 @@ def gdisconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
     else:
-        response = make_response(json.dumps('Failed to revoke token for
+        response = make_response(json.dumps('Failed to revoke token for\
                                             given user.', 400))
         response.headers['Content-Type'] = 'application/json'
         return response
+
 
 # JSON APIs to view Sport Catalog (# Make an API Endpoint (GET Request))
 # All catalog items for Sport <sport_id> JSON
@@ -197,7 +235,10 @@ def sportsJSON():
 @app.route('/sports/')
 def showSports():
     sports = session.query(Sport).order_by(Sport.name.asc())
-    return render_template('sports.html', sports=sports)
+    if 'username' not in login_session:
+        return render_template('publicsports.html', sports=sports)
+    else:
+        return render_template('sports.html', sports=sports)
 
 
 # Create a new sport
@@ -206,7 +247,8 @@ def newSport():
     if 'username' not in login_session:
         return redirect('/login')
     if request.method == 'POST':
-        newSport = Sport(name=request.form['name'])
+        newSport = Sport(name=request.form['name'],
+                         user_id=login_session['user_id'])
         session.add(newSport)
         flash('New Sport %s Successfully Created' % newSport.name)
         session.commit()
@@ -222,6 +264,11 @@ def editSport(sport_id):
     if 'username' not in login_session:
         return redirect('/login')
     editedSport = session.query(Sport).filter_by(id=sport_id).one()
+    if editedSport.user_id != login_session['user_id']:
+        return "<script>function myFunction() {alert('You are not \
+                authorized to delete this restaurant. Please create\
+                your own restaurant in order to delete.');}</script>\
+                <body onload='myFunction()''>"
     if request.method == 'POST':
         if request.form['name']:
             editedSport.name = request.form['name']
@@ -238,9 +285,14 @@ def editSport(sport_id):
 
 @app.route('/sports/<int:sport_id>/delete/', methods=['GET', 'POST'])
 def deleteSport(sport_id):
+    sportToDelete = session.query(Sport).filter_by(id=sport_id).one()
     if 'username' not in login_session:
         return redirect('/login')
-    sportToDelete = session.query(Sport).filter_by(id=sport_id).one()
+    if sportToDelete.user_id != login_session['user_id']:
+        return "<script>function myFunction() {alert('You are not\
+                 authorized to delete this restaurant. Please create\
+                  your own restaurant in order to delete.');}</script>\
+                  <body onload='myFunction()''>"
     if request.method == 'POST':
         session.delete(sportToDelete)
         flash('%s Successfully Deleted' % sportToDelete.name)
@@ -256,9 +308,29 @@ def deleteSport(sport_id):
 @app.route('/sports/<int:sport_id>/catalog/')
 def showCatalog(sport_id):
     sport = session.query(Sport).filter_by(id=sport_id).one()
+    creator = getUserInfo(sport.user_id)
     items = session.query(CatalogItem).filter_by(sport_id=sport_id).all()
-    return render_template('catalog.html', sport=sport, items=items,
-                           sport_id=sport_id)
+    if 'username' not in login_session or creator.id != login_session['user_id']:
+        return render_template('publiccatalog.html',
+                               sport=sport,
+                               items=items,
+                               sport_id=sport_id,
+                               creator=creator)
+    else:
+        return render_template('catalog.html',
+                               sport=sport,
+                               items=items,
+                               sport_id=sport_id,
+                               creator=creator)
+
+
+
+    sports = session.query(Sport).order_by(Sport.name.asc())
+    if 'username' not in login_session:
+        return render_template('publicsports.html', sports=sports)
+    else:
+        return render_template('sports.html', sports=sports)
+
 
 
 # Add new item to sport
@@ -267,10 +339,16 @@ def newItem(sport_id):
     if 'username' not in login_session:
         return redirect('/login')
     sport = session.query(Sport).filter_by(id=sport_id).one()
+    if login_session['user_id'] != sport.user_id:
+        return "<script>function myFunction() {alert('You are not \
+                authorized to delete this restaurant. Please create \
+                your own restaurant in order to delete.');}</script>\
+                <body onload='myFunction()''>"
     if request.method == 'POST':
         newItem = CatalogItem(name=request.form['name'],
                               description=request.form['description'],
-                              sport_id=sport_id)
+                              sport_id=sport_id,
+                              user_id=sport.user_id)
         session.add(newItem)
         session.commit()
         flash("New menu item created: %s!" % (newItem.name))
@@ -288,6 +366,11 @@ def editItem(sport_id, catalog_id):
         return redirect('/login')
     sport = session.query(Sport).filter_by(id=sport_id).one()
     editedItem = session.query(CatalogItem).filter_by(id=catalog_id).one()
+    if login_session['user_id'] != sport.user_id:
+        return "<script>function myFunction() {alert('You are not \
+                 authorized to delete this restaurant. Please create \
+                 your own restaurant in order to delete.');}</script>\
+                 <body onload='myFunction()''>"
 
     if request.method == 'POST':
         if request.form['name']:
@@ -312,6 +395,11 @@ def deleteItem(sport_id, catalog_id):
         return redirect('/login')
     sport = session.query(Sport).filter_by(id=sport_id).one()
     itemToDelete = session.query(CatalogItem).filter_by(id=catalog_id).one()
+    if login_session['user_id'] != sport.user_id:
+        return "<script>function myFunction() {alert('You are not \
+                 authorized to delete this restaurant. Please create \
+                  your own restaurant in order to delete.');}</script>\
+                  <body onload='myFunction()''>"
     if request.method == 'POST':
         session.delete(itemToDelete)
         session.commit()
