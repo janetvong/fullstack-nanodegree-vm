@@ -155,9 +155,6 @@ def getUserID(email):
         return None
 
 
-
-
-
 # DISCONNECT - Revoke a current user's token and reset their login_session.
 
 
@@ -310,7 +307,7 @@ def showCatalog(sport_id):
     sport = session.query(Sport).filter_by(id=sport_id).one()
     creator = getUserInfo(sport.user_id)
     items = session.query(CatalogItem).filter_by(sport_id=sport_id).all()
-    if 'username' not in login_session or creator.id != login_session['user_id']:
+    if 'username' not in login_session or creator.id!=login_session['user_id']:
         return render_template('publiccatalog.html',
                                sport=sport,
                                items=items,
@@ -323,8 +320,6 @@ def showCatalog(sport_id):
                                sport_id=sport_id,
                                creator=creator)
 
-
-
     sports = session.query(Sport).order_by(Sport.name.asc())
     if 'username' not in login_session:
         return render_template('publicsports.html', sports=sports)
@@ -332,8 +327,9 @@ def showCatalog(sport_id):
         return render_template('sports.html', sports=sports)
 
 
-
 # Add new item to sport
+
+
 @app.route('/sports/<int:sport_id>/catalog/new/', methods=['GET', 'POST'])
 def newItem(sport_id):
     if 'username' not in login_session:
