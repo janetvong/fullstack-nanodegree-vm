@@ -7,10 +7,10 @@
 <form action="{{url_for('editItem',sport_id=sport_id, catalog_id=catalog_id)}}" method = 'POST'>
 
 <p>Name:</p>
-<input type='text' size='30' name='name' placeholder='{{item.name}}'>
+<input type='text' size='30' name='name' placeholder='{{item.name}}' required minlength="2">
 
 <p>Description:</p>
-<input type='text' size='30' name='description' placeholder='{{item.description}}'>
+<input type='text' size='30' name='description' placeholder='{{item.description}}' required minlength="10">
 
 <input type='submit' value='Edit'>
 
